@@ -15,14 +15,7 @@ type ClockWithDateProps = {
 
 const clockTextStyles = 'text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]';
 
-const ClockWithDate = ({
-	isSettingsOpen,
-	selectedTimeZoneId,
-	onCloseSettings,
-	onSelectTimeZone,
-	onToggleSettings,
-	settingsOverlay,
-}: ClockWithDateProps) => {
+const ClockWithDate = ({ isSettingsOpen, selectedTimeZoneId, onCloseSettings, onSelectTimeZone, onToggleSettings, settingsOverlay }: ClockWithDateProps) => {
 	const settingsButton = useRef<HTMLButtonElement>(null);
 	const timeZone = selectedTimeZoneId === localTimeZoneId ? null : selectedTimeZoneId;
 	const currentTime = useTimeApiClock(timeZone);
@@ -55,7 +48,7 @@ const ClockWithDate = ({
 
 	return (
 		<section aria-label="Aktuální datum a čas" className="group font-outfit relative w-full max-w-md text-center text-white lg:w-fit lg:max-w-none">
-			<div className="relative px-8 py-1 whitespace-nowrap lg:px-12">
+			<div className="relative px-8 whitespace-nowrap lg:px-12">
 				<button
 					ref={settingsButton}
 					type="button"
@@ -63,7 +56,7 @@ const ClockWithDate = ({
 					aria-expanded={isSettingsOpen}
 					aria-controls="time-zone-settings"
 					onClick={onToggleSettings}
-					className={`absolute -top-1 right-0 grid size-9 cursor-pointer place-items-center rounded-full transition-all duration-150 hover:opacity-100! focus-visible:opacity-100! focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+					className={`absolute -top-4 right-0 grid size-6 cursor-pointer place-items-center rounded-full transition-all duration-150 hover:opacity-100! focus-visible:opacity-100! focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
 						isSettingsOpen ? 'bg-white/10 opacity-100' : 'opacity-50 lg:opacity-0 lg:group-hover:opacity-60'
 					}`}
 				>
