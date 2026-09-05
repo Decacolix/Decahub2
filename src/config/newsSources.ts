@@ -55,11 +55,11 @@ export const newsSources = [
 		homepageUrl: 'https://www.bbc.com/news/world',
 	},
 	{
-		id: 'guardian',
-		name: 'The Guardian',
+		id: 'sky',
+		name: 'Sky News',
 		group: 'international',
-		endpoint: '/api/news/guardian',
-		homepageUrl: 'https://www.theguardian.com/uk',
+		endpoint: '/api/news/sky',
+		homepageUrl: 'https://news.sky.com/',
 	},
 	{
 		id: 'fox',

@@ -44,9 +44,9 @@ const newsProxies: Readonly<Record<string, ProxyOptions>> = {
 		'https://feeds.bbci.co.uk',
 		'/news/world/rss.xml',
 	),
-	'/api/news/guardian': createNewsProxy(
-		'https://www.theguardian.com',
-		'/uk/rss',
+	'/api/news/sky': createNewsProxy(
+		'https://feeds.skynews.com',
+		'/feeds/rss/world.xml',
 	),
 	'/api/news/fox': createNewsProxy(
 		'https://moxie.foxnews.com',
