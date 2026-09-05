@@ -1,30 +1,34 @@
+import { isFiniteNumber, isRecord } from '../lib/typeGuards';
+
+/** Minimal TimeAPI payload consumed by the clock. */
 type TimeApiResponse = {
 	timezone: string;
 	unix_timestamp: number;
 };
 
-const timeApiUrl = '/api/time';
+/** Local proxy route for TimeAPI. */
+const timeApiUrl: string = '/api/time';
 
+/** Validates the unknown JSON payload returned by TimeAPI. */
 const isTimeApiResponse = (value: unknown): value is TimeApiResponse => {
-	if (typeof value !== 'object' || value === null) {
+	if (!isRecord(value)) {
 		return false;
 	}
 
-	const response = value as Record<string, unknown>;
-
 	return (
-		typeof response.timezone === 'string' &&
-		typeof response.unix_timestamp === 'number'
+		typeof value.timezone === 'string' &&
+		isFiniteNumber(value.unix_timestamp)
 	);
 };
 
+/** Returns the selected timezone's current Unix time in milliseconds. */
 export const fetchCurrentTime = async (
 	timeZone: string,
 	signal: AbortSignal,
 ): Promise<number> => {
-	const searchParameters = new URLSearchParams({ timeZone });
+	const searchParameters: URLSearchParams = new URLSearchParams({ timeZone });
 
-	const response = await fetch(`${timeApiUrl}?${searchParameters}`, {
+	const response: Response = await fetch(`${timeApiUrl}?${searchParameters}`, {
 		headers: { Accept: 'application/json' },
 		signal,
 	});

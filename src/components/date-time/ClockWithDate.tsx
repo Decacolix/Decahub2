@@ -1,75 +1,90 @@
-import { useCallback, useMemo, useRef, type ReactNode } from 'react';
-import settingsIcon from '../../assets/icons/settings/settings-icon.svg';
+import { useMemo, type ReactElement, type ReactNode } from 'react';
+import type { TimeFormat } from '../../config/clock';
+import { languageLocales, type Language } from '../../config/languages';
 import { localTimeZoneId, type TimeZoneId } from '../../config/timeZones';
-import { useTimeApiClock } from '../../hooks/useTimeApiClock';
-import TimeZoneSettings from './TimeZoneSettings';
+import { translations } from '../../config/translations';
+import PanelSettingsButton from '../settings/PanelSettingsButton';
+import ClockSettings from './ClockSettings';
 
+/** Inputs and preference callbacks required by the clock panel. */
 type ClockWithDateProps = {
+	currentTime: Date;
 	isSettingsOpen: boolean;
+	language: Language;
 	selectedTimeZoneId: TimeZoneId;
+	timeFormat: TimeFormat;
 	onCloseSettings: () => void;
+	onSelectTimeFormat: (timeFormat: TimeFormat) => void;
 	onSelectTimeZone: (timeZoneId: TimeZoneId) => void;
 	onToggleSettings: () => void;
 	settingsOverlay?: ReactNode;
 };
 
-const clockTextStyles = 'text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]';
+/** Shared high-contrast text treatment for the clock and date. */
+const clockTextStyles: string =
+	'text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]';
 
-const ClockWithDate = ({ isSettingsOpen, selectedTimeZoneId, onCloseSettings, onSelectTimeZone, onToggleSettings, settingsOverlay }: ClockWithDateProps) => {
-	const settingsButton = useRef<HTMLButtonElement>(null);
-	const timeZone = selectedTimeZoneId === localTimeZoneId ? null : selectedTimeZoneId;
-	const currentTime = useTimeApiClock(timeZone);
-	const timeFormatter = useMemo(
+/** Displays the selected timezone's live time and localized calendar date. */
+const ClockWithDate = ({
+	currentTime,
+	isSettingsOpen,
+	language,
+	selectedTimeZoneId,
+	timeFormat,
+	onCloseSettings,
+	onSelectTimeFormat,
+	onSelectTimeZone,
+	onToggleSettings,
+	settingsOverlay,
+}: ClockWithDateProps): ReactElement => {
+	const timeZone: string | null = selectedTimeZoneId === localTimeZoneId ? null : selectedTimeZoneId;
+	const text = translations[language];
+	const timeFormatter = useMemo<Intl.DateTimeFormat>(
 		() =>
-			new Intl.DateTimeFormat('cs-CZ', {
+			new Intl.DateTimeFormat(languageLocales[language], {
 				timeZone: timeZone ?? undefined,
 				hour: '2-digit',
 				minute: '2-digit',
 				second: '2-digit',
-				hourCycle: 'h23',
+				hourCycle: timeFormat === '12-hour' ? 'h12' : 'h23',
 			}),
-		[timeZone],
+		[language, timeFormat, timeZone],
 	);
-	const dateFormatter = useMemo(
+	const dateFormatter = useMemo<Intl.DateTimeFormat>(
 		() =>
-			new Intl.DateTimeFormat('cs-CZ', {
+			new Intl.DateTimeFormat(languageLocales[language], {
 				timeZone: timeZone ?? undefined,
 				day: 'numeric',
 				month: 'long',
 				year: 'numeric',
 			}),
-		[timeZone],
+		[language, timeZone],
 	);
-
-	const closeSettings = useCallback(() => {
-		onCloseSettings();
-		window.requestAnimationFrame(() => settingsButton.current?.focus());
-	}, [onCloseSettings]);
+	const timeParts: Intl.DateTimeFormatPart[] =
+		timeFormatter.formatToParts(currentTime);
 
 	return (
-		<section aria-label="Aktuální datum a čas" className="group font-outfit relative w-full max-w-md text-center text-white lg:w-fit lg:max-w-none">
+		<section aria-label={text.clock.label} className="group font-outfit relative w-full min-w-full max-w-md text-center text-white lg:w-fit lg:max-w-none">
 			<div className="relative px-8 whitespace-nowrap lg:px-12">
-				<button
-					ref={settingsButton}
-					type="button"
-					aria-label="Nastavit časové pásmo"
-					aria-expanded={isSettingsOpen}
-					aria-controls="time-zone-settings"
-					onClick={onToggleSettings}
-					className={`absolute -top-4 right-0 grid size-6 cursor-pointer place-items-center rounded-full transition-all duration-150 hover:opacity-100! focus-visible:opacity-100! focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-						isSettingsOpen ? 'bg-white/10 opacity-100' : 'opacity-50 lg:opacity-0 lg:group-hover:opacity-60'
-					}`}
-				>
-					<img src={settingsIcon} alt="" className="size-6" />
-				</button>
+				<PanelSettingsButton
+					id="clock-settings-button"
+					controls="clock-settings"
+					isOpen={isSettingsOpen}
+					label={text.clock.settings}
+					onToggle={onToggleSettings}
+				/>
 
-				<time dateTime={currentTime.toISOString()} className={`block text-6xl leading-none font-light tracking-wide tabular-nums lg:text-8xl ${clockTextStyles}`}>
-					{timeFormatter.format(currentTime)}
+				<time dateTime={currentTime.toISOString()} className={`block text-6xl leading-none font-light tracking-wide tabular-nums xl:text-8xl ${clockTextStyles}`}>
+					{timeParts.map((part, index) => (
+						<span key={`${part.type}-${index}`} className={part.type === 'dayPeriod' ? 'inline-block text-[0.35em] font-normal tracking-normal' : undefined}>
+							{part.value}
+						</span>
+					))}
 				</time>
 				<p className={`mt-3 text-2xl font-normal lg:text-3xl ${clockTextStyles}`}>{dateFormatter.format(currentTime)}</p>
 			</div>
 
-			<TimeZoneSettings isOpen={isSettingsOpen} selectedTimeZoneId={selectedTimeZoneId} onClose={closeSettings} onSelect={onSelectTimeZone} />
+			<ClockSettings isOpen={isSettingsOpen} language={language} selectedTimeFormat={timeFormat} selectedTimeZoneId={selectedTimeZoneId} onClose={onCloseSettings} onSelectTimeFormat={onSelectTimeFormat} onSelectTimeZone={onSelectTimeZone} />
 			{settingsOverlay}
 		</section>
 	);

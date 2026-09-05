@@ -10,16 +10,27 @@ import {
 	setWeatherPreferences,
 } from '../lib/preferences';
 
-export const useWeatherPreferences = () => {
+/** State and actions exposed by the weather-preferences hook. */
+type WeatherPreferenceController = WeatherPreferences & {
+	selectLocation: (location: WeatherLocation) => void;
+	selectTemperatureUnit: (temperatureUnit: TemperatureUnit) => void;
+	selectWindSpeedUnit: (windSpeedUnit: WindSpeedUnit) => void;
+};
+
+/** Restores, updates, and persists the related weather preferences atomically. */
+export const useWeatherPreferences = (): WeatherPreferenceController => {
 	const [weatherPreferences, setCurrentWeatherPreferences] =
 		useState<WeatherPreferences>(getWeatherPreferences);
-	const weatherPreferencesRef = useRef(weatherPreferences);
+	const weatherPreferencesRef = useRef<WeatherPreferences>(weatherPreferences);
 
-	const updatePreferences = useCallback((nextPreferences: WeatherPreferences) => {
-		weatherPreferencesRef.current = nextPreferences;
-		setCurrentWeatherPreferences(nextPreferences);
-		setWeatherPreferences(nextPreferences);
-	}, []);
+	const updatePreferences = useCallback(
+		(nextPreferences: WeatherPreferences): void => {
+			weatherPreferencesRef.current = nextPreferences;
+			setCurrentWeatherPreferences(nextPreferences);
+			setWeatherPreferences(nextPreferences);
+		},
+		[],
+	);
 
 	const selectLocation = useCallback(
 		(location: WeatherLocation) => {

@@ -1,5 +1,14 @@
-export const localTimeZoneId = 'local';
+/** Sentinel value that makes formatters use the browser's local timezone. */
+export const localTimeZoneId = 'local' as const;
 
+/** Shared shape of an entry in the timezone picker. */
+type TimeZoneOption = {
+	code: string;
+	name: string;
+	utc: string | null;
+};
+
+/** Ordered timezone choices displayed from UTC−12 through UTC+14. */
 export const timeZoneOptions = [
 	{ code: localTimeZoneId, name: 'Lokální čas', utc: null },
 	{ code: 'Etc/GMT+12', name: 'Bakerův ostrov (Pacifik)', utc: '-12:00' },
@@ -136,10 +145,68 @@ export const timeZoneOptions = [
 		utc: '+13:00',
 	},
 	{ code: 'Pacific/Kiritimati', name: 'Kiritimati (Pacifik)', utc: '+14:00' },
-] as const;
+] as const satisfies readonly TimeZoneOption[];
 
+/** Identifier persisted for the selected timezone. */
 export type TimeZoneId = (typeof timeZoneOptions)[number]['code'];
 
+/** English labels corresponding to the Czech timezone definitions. */
+export const timeZoneNamesEn: Readonly<Record<TimeZoneId, string>> = {
+	local: 'Local time',
+	'Etc/GMT+12': 'Baker Island (Pacific)',
+	'Pacific/Niue': 'Niue (Pacific)',
+	'US/Hawaii': 'Hawaii (United States)',
+	'Pacific/Marquesas': 'Marquesas Islands (French Polynesia)',
+	'US/Alaska': 'Alaska (United States)',
+	'America/Los_Angeles':
+		'Los Angeles (United States) / Vancouver (Canada) / Tijuana (Mexico)',
+	'America/Denver':
+		'Denver (United States) / Calgary (Canada) / Ciudad Juárez (Mexico)',
+	'America/Chicago':
+		'Chicago (United States) / Winnipeg (Canada) / San José (Costa Rica)',
+	'America/New_York':
+		'New York (United States) / Toronto (Canada) / Havana (Cuba)',
+	'America/Santiago':
+		'Santiago (Chile) / Santo Domingo (Dominican Republic) / Manaus (Brazil)',
+	'Canada/Newfoundland': 'Newfoundland and Labrador (Canada)',
+	'America/Sao_Paulo':
+		'São Paulo (Brazil) / Buenos Aires (Argentina) / Montevideo (Uruguay)',
+	'Atlantic/South_Georgia':
+		'South Georgia and South Sandwich Islands (Atlantic Ocean)',
+	'Atlantic/Cape_Verde': 'Cape Verde (Atlantic Ocean)',
+	'Europe/London':
+		'London (United Kingdom) / Dublin (Ireland) / Lisbon (Portugal)',
+	'Europe/Prague':
+		'Prague (Czech Republic) / Berlin (Germany) / Rome (Italy)',
+	'Europe/Athens':
+		'Athens (Greece) / Helsinki (Finland) / Kyiv (Ukraine)',
+	'Europe/Moscow':
+		'Moscow (Russia) / Istanbul (Turkey) / Riyadh (Saudi Arabia)',
+	'Asia/Tehran': 'Tehran (Iran)',
+	'Asia/Dubai': 'Dubai (United Arab Emirates)',
+	'Asia/Kabul': 'Kabul (Afghanistan)',
+	'Asia/Karachi': 'Karachi (Pakistan) / Maldives (Indian Ocean)',
+	'Asia/Colombo': 'New Delhi (India) / Colombo (Sri Lanka)',
+	'Asia/Kathmandu': 'Kathmandu (Nepal)',
+	'Asia/Dhaka': 'Dhaka (Bangladesh) / Omsk (Russia)',
+	'Asia/Yangon': 'Yangon (Myanmar)',
+	'Asia/Jakarta': 'Jakarta (Indonesia) / Bangkok (Thailand)',
+	'Asia/Shanghai': 'Shanghai (China) / Singapore',
+	'Australia/Eucla': 'Eucla (Australia)',
+	'Asia/Tokyo': 'Tokyo (Japan) / Seoul (South Korea)',
+	'Australia/Adelaide': 'Adelaide (Australia)',
+	'Australia/Sydney': 'Sydney (Australia) / Vladivostok (Russia)',
+	'Australia/Lord_Howe': 'Lord Howe Island (Pacific)',
+	'Pacific/Noumea': 'Nouméa (Pacific)',
+	'Pacific/Auckland': 'Auckland (New Zealand)',
+	'Pacific/Chatham': 'Chatham Islands (Pacific)',
+	'Pacific/Samoa': 'Samoa / Phoenix Islands (Pacific)',
+	'Pacific/Kiritimati': 'Kiritimati (Pacific)',
+};
+
+/** Timezone used when no valid saved preference exists. */
 export const defaultTimeZoneId: TimeZoneId = 'Europe/Prague';
 
-export const isTimeZoneId = (value: unknown): value is TimeZoneId => timeZoneOptions.some(({ code }) => code === value);
+/** Checks unknown persisted data before treating it as a timezone ID. */
+export const isTimeZoneId = (value: unknown): value is TimeZoneId =>
+	timeZoneOptions.some(({ code }) => code === value);

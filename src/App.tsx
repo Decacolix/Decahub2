@@ -1,5 +1,7 @@
+import type { ReactElement } from 'react';
 import DashboardPage from './pages/DashboardPage';
 
-const App = () => <DashboardPage />;
+/** Application root. */
+const App = (): ReactElement => <DashboardPage />;
 
 export default App;

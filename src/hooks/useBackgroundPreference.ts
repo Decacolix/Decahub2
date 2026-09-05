@@ -1,20 +1,22 @@
-import { useState } from 'react';
 import type { BackgroundId } from '../config/backgrounds';
 import {
 	getBackgroundPreference,
 	setBackgroundPreference,
 } from '../lib/preferences';
+import { usePersistentPreference } from './usePersistentPreference';
 
-export const useBackgroundPreference = () => {
-	const [backgroundId, setBackgroundId] = useState<BackgroundId>(
+/** State and actions exposed by the background-preference hook. */
+type BackgroundPreference = {
+	backgroundId: BackgroundId;
+	selectBackground: (backgroundId: BackgroundId) => void;
+};
+
+/** Restores and persists the selected dashboard background. */
+export const useBackgroundPreference = (): BackgroundPreference => {
+	const [backgroundId, selectBackground] = usePersistentPreference(
 		getBackgroundPreference,
+		setBackgroundPreference,
 	);
-
-	const selectBackground = (nextBackgroundId: BackgroundId) => {
-		setBackgroundId(nextBackgroundId);
-		setBackgroundPreference(nextBackgroundId);
-	};
 
 	return { backgroundId, selectBackground };
 };
-

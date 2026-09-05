@@ -7,13 +7,16 @@ import type {
 import { fetchWeather } from '../services/weatherApi';
 import type { WeatherData } from '../types/weather';
 
+/** Loading state returned by the weather hook. */
 type WeatherState = {
 	data: WeatherData | null;
 	status: 'loading' | 'ready' | 'error';
 };
 
-const refreshInterval = 15 * 60 * 1_000;
+/** Refresh weather conditions every fifteen minutes. */
+const refreshInterval: number = 15 * 60 * 1_000;
 
+/** Loads weather immediately and refreshes it in the background. */
 export const useWeather = (
 	location: WeatherLocation,
 	temperatureUnit: TemperatureUnit,
@@ -25,11 +28,11 @@ export const useWeather = (
 	});
 
 	useEffect(() => {
-		const controller = new AbortController();
+		const controller: AbortController = new AbortController();
 
-		const loadWeather = async () => {
+		const loadWeather = async (): Promise<void> => {
 			try {
-				const data = await fetchWeather(
+				const data: WeatherData = await fetchWeather(
 					location,
 					temperatureUnit,
 					windSpeedUnit,
@@ -50,7 +53,7 @@ export const useWeather = (
 		};
 
 		void loadWeather();
-		const refreshTimer = window.setInterval(
+		const refreshTimer: number = window.setInterval(
 			() => void loadWeather(),
 			refreshInterval,
 		);

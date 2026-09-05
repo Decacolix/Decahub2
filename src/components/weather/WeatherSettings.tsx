@@ -1,15 +1,28 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	type ReactElement,
+} from 'react';
 import closeIcon from '../../assets/icons/settings/close-icon.svg';
 import searchIcon from '../../assets/icons/settings/search-icon.svg';
+import { languageLocales, type Language } from '../../config/languages';
+import { translations } from '../../config/translations';
 import type {
 	TemperatureUnit,
 	WeatherLocation,
 	WindSpeedUnit,
 } from '../../config/weather';
 import { searchWeatherLocations } from '../../services/weatherLocationApi';
+import BinarySwitch from '../settings/BinarySwitch';
+import SettingsDialog from '../settings/SettingsDialog';
 
+/** Inputs and preference callbacks required by the weather dialog. */
 type WeatherSettingsProps = {
 	isOpen: boolean;
+	language: Language;
 	selectedLocation: WeatherLocation;
 	temperatureUnit: TemperatureUnit;
 	windSpeedUnit: WindSpeedUnit;
@@ -19,28 +32,31 @@ type WeatherSettingsProps = {
 	onSelectWindSpeedUnit: (windSpeedUnit: WindSpeedUnit) => void;
 };
 
+/** User-visible state of the location search. */
 type SearchStatus = 'idle' | 'searching' | 'found' | 'not-found' | 'error';
 
-const coordinateFormatter = new Intl.NumberFormat('cs-CZ', {
-	minimumFractionDigits: 2,
-	maximumFractionDigits: 4,
-});
-
-const getLocationDetails = (location: WeatherLocation) => [location.adminArea, location.country].filter(Boolean).join(', ');
-
-const windSpeedOptions: {
-	value: WindSpeedUnit;
+/** Label and API value for a selectable wind-speed unit. */
+type WindSpeedOption = {
 	label: string;
-	description: string;
-}[] = [
-	{ value: 'kmh', label: 'km/h', description: 'Kilometry za hodinu' },
-	{ value: 'ms', label: 'm/s', description: 'Metry za sekundu' },
-	{ value: 'kn', label: 'kn', description: 'Uzly' },
-	{ value: 'mph', label: 'mph', description: 'Míle za hodinu' },
+	value: WindSpeedUnit;
+};
+
+/** Builds the optional administrative-area and country label. */
+const getLocationDetails = (location: WeatherLocation): string =>
+	[location.adminArea, location.country].filter(Boolean).join(', ');
+
+/** Wind-speed choices supported by the weather API. */
+const windSpeedOptions: readonly WindSpeedOption[] = [
+	{ value: 'kmh', label: 'km/h' },
+	{ value: 'ms', label: 'm/s' },
+	{ value: 'kn', label: 'kn' },
+	{ value: 'mph', label: 'mph' },
 ];
 
+/** Provides location search and weather-unit preferences. */
 const WeatherSettings = ({
 	isOpen,
+	language,
 	selectedLocation,
 	temperatureUnit,
 	windSpeedUnit,
@@ -48,37 +64,61 @@ const WeatherSettings = ({
 	onSelectLocation,
 	onSelectTemperatureUnit,
 	onSelectWindSpeedUnit,
-}: WeatherSettingsProps) => {
+}: WeatherSettingsProps): ReactElement => {
 	const [query, setQuery] = useState('');
 	const [suggestions, setSuggestions] = useState<WeatherLocation[]>([]);
 	const [searchStatus, setSearchStatus] = useState<SearchStatus>('idle');
 	const activeSearchController = useRef<AbortController | null>(null);
 	const autocompleteTimer = useRef<number | null>(null);
 	const searchInput = useRef<HTMLInputElement>(null);
-	const skipNextAutocomplete = useRef(false);
+	const skipNextAutocomplete = useRef<boolean>(false);
+	const text = translations[language].weatherSettings;
+	const coordinateFormatter = useMemo<Intl.NumberFormat>(
+		() =>
+			new Intl.NumberFormat(languageLocales[language], {
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 4,
+			}),
+		[language],
+	);
+	const cancelPendingSearch = useCallback((): void => {
+		activeSearchController.current?.abort();
+		activeSearchController.current = null;
+
+		if (autocompleteTimer.current !== null) {
+			window.clearTimeout(autocompleteTimer.current);
+			autocompleteTimer.current = null;
+		}
+	}, []);
 
 	const chooseLocation = useCallback(
-		(location: WeatherLocation) => {
-			activeSearchController.current?.abort();
-			activeSearchController.current = null;
+		(location: WeatherLocation): void => {
+			cancelPendingSearch();
 			skipNextAutocomplete.current = true;
 			setQuery(location.name);
 			setSuggestions([]);
 			setSearchStatus('found');
 			onSelectLocation(location);
 		},
-		[onSelectLocation],
+		[cancelPendingSearch, onSelectLocation],
 	);
 
 	const runSearch = useCallback(
-		async (searchTerm: string, selectFirstResult = false) => {
-			activeSearchController.current?.abort();
-			const controller = new AbortController();
+		async (
+			searchTerm: string,
+			selectFirstResult = false,
+		): Promise<void> => {
+			cancelPendingSearch();
+			const controller: AbortController = new AbortController();
 			activeSearchController.current = controller;
 			setSearchStatus('searching');
 
 			try {
-				const locations = await searchWeatherLocations(searchTerm, controller.signal);
+				const locations: WeatherLocation[] = await searchWeatherLocations(
+					searchTerm,
+					language,
+					controller.signal,
+				);
 
 				if (activeSearchController.current !== controller) {
 					return;
@@ -105,11 +145,11 @@ const WeatherSettings = ({
 				}
 			}
 		},
-		[chooseLocation],
+		[cancelPendingSearch, chooseLocation, language],
 	);
 
 	useEffect(() => {
-		const searchTerm = query.trim();
+		const searchTerm: string = query.trim();
 
 		if (skipNextAutocomplete.current) {
 			skipNextAutocomplete.current = false;
@@ -126,70 +166,28 @@ const WeatherSettings = ({
 		}, 300);
 
 		return () => {
-			if (autocompleteTimer.current !== null) {
-				window.clearTimeout(autocompleteTimer.current);
-				autocompleteTimer.current = null;
-			}
-			activeSearchController.current?.abort();
+			cancelPendingSearch();
 		};
-	}, [isOpen, query, runSearch]);
+	}, [cancelPendingSearch, isOpen, query, runSearch]);
 
-	useEffect(
-		() => () => {
-			activeSearchController.current?.abort();
-		},
-		[],
-	);
-
-	useEffect(() => {
-		if (!isOpen) {
-			return;
-		}
-
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') {
-				onClose();
-			}
-		};
-
-		document.addEventListener('keydown', handleKeyDown);
-
-		return () => document.removeEventListener('keydown', handleKeyDown);
-	}, [isOpen, onClose]);
-
-	if (!isOpen) {
-		return null;
-	}
-
-	const isFahrenheit = temperatureUnit === 'fahrenheit';
-	const selectedLocationDetails = getLocationDetails(selectedLocation);
+	const isFahrenheit: boolean = temperatureUnit === 'fahrenheit';
+	const selectedLocationDetails: string = getLocationDetails(selectedLocation);
 
 	return (
-		<div
+		<SettingsDialog
+			bodyClassName="max-h-[min(72vh,38rem)] space-y-5 overflow-y-auto p-5"
+			closeButtonAutoFocus={false}
+			closeLabel={text.close}
 			id="weather-settings"
-			role="dialog"
-			aria-labelledby="weather-settings-title"
-			className="absolute top-[50%] left-1/2 z-30 mt-4 w-[min(92vw,34rem)] -translate-x-1/2 overflow-hidden rounded-2xl border border-white/20 bg-slate-950/85 text-left text-white shadow-2xl backdrop-blur-xl lg:top-full"
+			isOpen={isOpen}
+			onClose={onClose}
+			returnFocusId="weather-settings-button"
+			title={text.title}
 		>
-			<header className="flex items-center justify-between border-b border-white/15 px-5 py-4">
-				<h2 id="weather-settings-title" className="text-xl font-semibold">
-					Nastavení počasí
-				</h2>
-				<button type="button" aria-label="Zavřít nastavení počasí" onClick={onClose} className="grid size-9 cursor-pointer place-items-center rounded-full opacity-70 transition hover:bg-white/10 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
-					<img src={closeIcon} alt="" className="size-4" />
-				</button>
-			</header>
-
-			<div className="max-h-[min(72vh,38rem)] space-y-5 overflow-y-auto p-5">
 				<form
 					onSubmit={event => {
 						event.preventDefault();
-						const searchTerm = query.trim();
-						if (autocompleteTimer.current !== null) {
-							window.clearTimeout(autocompleteTimer.current);
-							autocompleteTimer.current = null;
-						}
-
+						const searchTerm: string = query.trim();
 						if (searchTerm.length < 2) {
 							setSuggestions([]);
 							setSearchStatus('not-found');
@@ -200,7 +198,7 @@ const WeatherSettings = ({
 					}}
 				>
 					<label htmlFor="weather-location-search" className="mb-2 block text-sm font-medium text-white/80">
-						Vyhledat místo
+						{text.searchLocation}
 					</label>
 					<div className="flex rounded-xl border border-white/25 bg-white/10 focus-within:border-white/70">
 						<input
@@ -216,9 +214,9 @@ const WeatherSettings = ({
 							aria-autocomplete="list"
 							aria-expanded={suggestions.length > 0}
 							aria-controls="weather-location-suggestions"
-							placeholder="Praha, New York, Sydney…"
+							placeholder={text.placeholder}
 							onChange={event => {
-								activeSearchController.current?.abort();
+								cancelPendingSearch();
 								skipNextAutocomplete.current = false;
 								setQuery(event.target.value);
 								setSuggestions([]);
@@ -229,14 +227,9 @@ const WeatherSettings = ({
 						{query && (
 							<button
 								type="button"
-								aria-label="Vymazat hledání"
+								aria-label={text.clearSearch}
 								onClick={() => {
-									activeSearchController.current?.abort();
-									activeSearchController.current = null;
-									if (autocompleteTimer.current !== null) {
-										window.clearTimeout(autocompleteTimer.current);
-										autocompleteTimer.current = null;
-									}
+									cancelPendingSearch();
 									skipNextAutocomplete.current = false;
 									setQuery('');
 									setSuggestions([]);
@@ -248,16 +241,16 @@ const WeatherSettings = ({
 								<img src={closeIcon} alt="" className="size-3" />
 							</button>
 						)}
-						<button type="submit" aria-label="Vyhledat místo" className="grid w-12 shrink-0 cursor-pointer place-items-center rounded-r-xl opacity-70 transition hover:bg-white/10 hover:opacity-100 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white">
+						<button type="submit" aria-label={text.search} className="grid w-12 shrink-0 cursor-pointer place-items-center rounded-r-xl opacity-70 transition hover:bg-white/10 hover:opacity-100 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white">
 							<img src={searchIcon} alt="" className="size-5" />
 						</button>
 					</div>
 				</form>
 
 				{suggestions.length > 0 && (
-					<ul id="weather-location-suggestions" role="listbox" aria-label="Nalezená místa" className="-mt-3 max-h-56 space-y-1 overflow-y-auto rounded-xl border border-white/15 bg-black/20 p-2">
+					<ul id="weather-location-suggestions" role="listbox" aria-label={text.results} className="-mt-3 max-h-56 space-y-1 overflow-y-auto rounded-xl border border-white/15 bg-black/20 p-2">
 						{suggestions.map(location => {
-							const details = getLocationDetails(location);
+							const details: string = getLocationDetails(location);
 
 							return (
 								<li key={`${location.latitude}-${location.longitude}-${location.name}`}>
@@ -273,43 +266,40 @@ const WeatherSettings = ({
 
 				{searchStatus !== 'idle' && (
 					<p role="status" className={`-mt-3 text-sm ${searchStatus === 'found' ? 'text-emerald-300' : searchStatus === 'not-found' || searchStatus === 'error' ? 'text-rose-300' : 'text-white/65'}`}>
-						{searchStatus === 'searching' && 'Vyhledávání…'}
-						{searchStatus === 'found' && 'Místo bylo nalezeno.'}
-						{searchStatus === 'not-found' && 'Místo nebylo nalezeno.'}
-						{searchStatus === 'error' && 'Vyhledávání se nepodařilo. Zkuste to prosím znovu.'}
+						{searchStatus === 'searching' && text.searching}
+						{searchStatus === 'found' && text.found}
+						{searchStatus === 'not-found' && text.notFound}
+						{searchStatus === 'error' && text.searchError}
 					</p>
 				)}
 
 				<section className="rounded-xl border border-white/15 bg-white/5 p-4" aria-labelledby="selected-weather-location">
 					<p id="selected-weather-location" className="text-sm text-white/60">
-						Aktuálně vybrané místo
+						{text.selectedLocation}
 					</p>
 					<p className="mt-1 text-lg font-semibold">{selectedLocation.name}</p>
 					{selectedLocationDetails && <p className="text-sm text-white/70">{selectedLocationDetails}</p>}
 					<p className="mt-2 text-sm tabular-nums text-white/70">
-						Zeměpisná šířka: {coordinateFormatter.format(selectedLocation.latitude)}° | Zeměpisná délka: {coordinateFormatter.format(selectedLocation.longitude)}°
+						{text.latitude}: {coordinateFormatter.format(selectedLocation.latitude)}° | {text.longitude}: {coordinateFormatter.format(selectedLocation.longitude)}°
 					</p>
 				</section>
 
 				<div className="flex items-center justify-between gap-4 rounded-xl border border-white/15 bg-white/5 p-4">
 					<div>
-						<p className="font-semibold">Jednotka teploty</p>
-						<p className="text-sm text-white/60">Celsius nebo Fahrenheit</p>
+						<p className="font-semibold">{text.temperatureUnit}</p>
+						<p className="text-sm text-white/60">{text.temperatureUnitDescription}</p>
 					</div>
-					<div className="flex items-center gap-2 font-semibold">
-						<span>°C</span>
-						<button
-							type="button"
-							role="switch"
-							aria-checked={isFahrenheit}
-							aria-label="Používat stupně Fahrenheita"
-							onClick={() => onSelectTemperatureUnit(isFahrenheit ? 'celsius' : 'fahrenheit')}
-							className="relative h-8 w-14 cursor-pointer rounded-full border border-white/30 bg-white/20 p-1 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-						>
-							<span className={`block size-6 rounded-full bg-white shadow transition-transform ${isFahrenheit ? 'translate-x-6' : 'translate-x-0'}`} />
-						</button>
-						<span>°F</span>
-					</div>
+					<BinarySwitch
+						ariaLabel={text.fahrenheit}
+						isRightSelected={isFahrenheit}
+						leftLabel="°C"
+						onToggle={() =>
+							onSelectTemperatureUnit(
+								isFahrenheit ? 'celsius' : 'fahrenheit',
+							)
+						}
+						rightLabel="°F"
+					/>
 				</div>
 
 				<div
@@ -318,11 +308,11 @@ const WeatherSettings = ({
 					className="rounded-xl border border-white/15 bg-white/5 p-4"
 				>
 					<p id="wind-speed-unit-title" className="font-semibold">
-						Jednotka rychlosti větru
+						{text.windSpeedUnit}
 					</p>
 					<div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
-						{windSpeedOptions.map(({ value, label, description }) => {
-							const isSelected = value === windSpeedUnit;
+						{windSpeedOptions.map(({ value, label }) => {
+							const isSelected: boolean = value === windSpeedUnit;
 
 							return (
 								<label
@@ -339,15 +329,14 @@ const WeatherSettings = ({
 									/>
 									<span>
 										<span className="block font-semibold">{label}</span>
-										<span className="block text-sm text-white/60">{description}</span>
+										<span className="block text-sm text-white/60">{text.windUnits[value]}</span>
 									</span>
 								</label>
 							);
 						})}
 					</div>
 				</div>
-			</div>
-		</div>
+		</SettingsDialog>
 	);
 };
 

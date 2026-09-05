@@ -1,20 +1,22 @@
-import { useState } from 'react';
 import type { TimeZoneId } from '../config/timeZones';
 import {
 	getTimeZonePreference,
 	setTimeZonePreference,
 } from '../lib/preferences';
+import { usePersistentPreference } from './usePersistentPreference';
 
-export const useTimeZonePreference = () => {
-	const [timeZoneId, setTimeZoneId] = useState<TimeZoneId>(
+/** State and actions exposed by the timezone-preference hook. */
+type TimeZonePreference = {
+	selectTimeZone: (timeZoneId: TimeZoneId) => void;
+	timeZoneId: TimeZoneId;
+};
+
+/** Restores and persists the selected timezone. */
+export const useTimeZonePreference = (): TimeZonePreference => {
+	const [timeZoneId, selectTimeZone] = usePersistentPreference(
 		getTimeZonePreference,
+		setTimeZonePreference,
 	);
-
-	const selectTimeZone = (nextTimeZoneId: TimeZoneId) => {
-		setTimeZoneId(nextTimeZoneId);
-		setTimeZonePreference(nextTimeZoneId);
-	};
 
 	return { timeZoneId, selectTimeZone };
 };
-

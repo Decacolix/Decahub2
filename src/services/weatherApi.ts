@@ -4,7 +4,9 @@ import type {
 	WindSpeedUnit,
 } from '../config/weather';
 import type { WeatherData } from '../types/weather';
+import { isFiniteNumber, isRecord } from '../lib/typeGuards';
 
+/** Minimal forecast payload consumed from Open-Meteo. */
 type OpenMeteoResponse = {
 	current: {
 		temperature_2m: number;
@@ -20,21 +22,35 @@ type OpenMeteoResponse = {
 	};
 };
 
-const weatherApiUrl = 'https://api.open-meteo.com/v1/forecast';
-const requiredDailyEntries = 4;
+/** Open-Meteo forecast endpoint used directly by the browser. */
+const weatherApiUrl: string = 'https://api.open-meteo.com/v1/forecast';
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-	typeof value === 'object' && value !== null;
+/** Today plus the three forecast days displayed by the dashboard. */
+const requiredDailyEntries: number = 4;
 
-const isFiniteNumber = (value: unknown): value is number =>
-	typeof value === 'number' && Number.isFinite(value);
-
+/** Validates an unknown array of numeric API values. */
 const isNumberArray = (value: unknown): value is number[] =>
 	Array.isArray(value) && value.every(isFiniteNumber);
 
+/** Validates an unknown array of string API values. */
 const isStringArray = (value: unknown): value is string[] =>
 	Array.isArray(value) && value.every((item) => typeof item === 'string');
 
+/**
+ * Reads an API array only after the response has passed its length validation.
+ * The runtime guard also keeps indexed access safe if the response changes later.
+ */
+const getRequiredValue = <Value>(values: readonly Value[], index: number): Value => {
+	const value: Value | undefined = values[index];
+
+	if (value === undefined) {
+		throw new Error('Open-Meteo returned incomplete daily weather data.');
+	}
+
+	return value;
+};
+
+/** Validates all forecast fields and the required number of daily entries. */
 const isOpenMeteoResponse = (value: unknown): value is OpenMeteoResponse => {
 	if (!isRecord(value) || !isRecord(value.current) || !isRecord(value.daily)) {
 		return false;
@@ -67,13 +83,14 @@ const isOpenMeteoResponse = (value: unknown): value is OpenMeteoResponse => {
 	);
 };
 
+/** Fetches current conditions and a three-day forecast for one location. */
 export const fetchWeather = async (
 	location: WeatherLocation,
 	temperatureUnit: TemperatureUnit,
 	windSpeedUnit: WindSpeedUnit,
 	signal: AbortSignal,
 ): Promise<WeatherData> => {
-	const searchParameters = new URLSearchParams({
+	const searchParameters: URLSearchParams = new URLSearchParams({
 		latitude: String(location.latitude),
 		longitude: String(location.longitude),
 		current:
@@ -84,7 +101,7 @@ export const fetchWeather = async (
 		timezone: location.timeZone,
 		forecast_days: String(requiredDailyEntries),
 	});
-	const response = await fetch(`${weatherApiUrl}?${searchParameters}`, {
+	const response: Response = await fetch(`${weatherApiUrl}?${searchParameters}`, {
 		headers: { Accept: 'application/json' },
 		signal,
 	});
@@ -104,17 +121,17 @@ export const fetchWeather = async (
 		windSpeedUnit,
 		current: {
 			temperature: data.current.temperature_2m,
-			maxTemperature: data.daily.temperature_2m_max[0],
-			minTemperature: data.daily.temperature_2m_min[0],
+			maxTemperature: getRequiredValue(data.daily.temperature_2m_max, 0),
+			minTemperature: getRequiredValue(data.daily.temperature_2m_min, 0),
 			humidity: data.current.relative_humidity_2m,
 			windSpeed: data.current.wind_speed_10m,
 			weatherCode: data.current.weather_code,
 		},
-		forecast: data.daily.time.slice(1, 4).map((date, index) => ({
+		forecast: data.daily.time.slice(1, requiredDailyEntries).map((date, index) => ({
 			date,
-			maxTemperature: data.daily.temperature_2m_max[index + 1],
-			minTemperature: data.daily.temperature_2m_min[index + 1],
-			weatherCode: data.daily.weather_code[index + 1],
+			maxTemperature: getRequiredValue(data.daily.temperature_2m_max, index + 1),
+			minTemperature: getRequiredValue(data.daily.temperature_2m_min, index + 1),
+			weatherCode: getRequiredValue(data.daily.weather_code, index + 1),
 		})),
 	};
 };

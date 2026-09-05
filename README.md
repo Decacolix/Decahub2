@@ -1,78 +1,31 @@
-# React + TypeScript + Vite
+# Decahub.cz v2
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Decahub is a simple dashboard website that consists of information about current time, weather information and news.<br/><br/>
+The website is a purely front-end solution, using open APIs to gather the data, and allowing user to configure the displayed information.<br/><br/>
+Users can switch between the Czech and the English language in the settings.
 
-Currently, two official plugins are available:
+Previous version: [Decahub](https://github.com/Decacolix/Decahub)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Technologies used
 
-## React Compiler
+- [TypeScript](https://www.typescriptlang.org/) as a programming language
+- [React](https://react.dev/) as a library
+- [Tailwind](https://tailwindcss.com/) as a CSS framework
+- [Visual Studio Code](https://code.visualstudio.com/) as an editor
+- [Affinity](https://www.affinity.studio/) to create the icons
+- [Codex](https://openai.com/codex/) as an AI helper
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+## Sources for data
 
-Note: This will impact Vite dev & build performances.
-You can also try [the experimental native React Compiler support in plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md#rust-react-compiler) by using `compiler: true` in the plugin options instead of using the Babel plugin.
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
-
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
+- [TimeAPI](https://timeapi.io/) API for time
+- [Open Meteo](https://open-meteo.com/) API for weather
+- [ČT24](https://ct24.ceskatelevize.cz/) RSS for news
+- [iDNES](https://www.idnes.cz/) RSS for news
+- [Novinky](https://www.novinky.cz/) RSS for news
+- [Aktuálně](https://www.aktualne.cz/) RSS for news
+- [Hospodářské noviny](https://hn.cz/) RSS for news
+- [BBC](https://www.bbc.com/) RSS for news
+- [The Guardian](https://www.theguardian.com/) RSS for news
+- [Fox News](https://www.foxnews.com/) RSS for news
+- [Euronews](https://www.euronews.com/) RSS for news
+- [NBC News](https://www.nbcnews.com/) RSS for news

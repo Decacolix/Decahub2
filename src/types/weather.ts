@@ -1,5 +1,6 @@
 import type { TemperatureUnit, WindSpeedUnit } from '../config/weather';
 
+/** Current conditions returned by Open-Meteo. */
 export type CurrentWeather = {
 	temperature: number;
 	maxTemperature: number;
@@ -9,6 +10,7 @@ export type CurrentWeather = {
 	weatherCode: number;
 };
 
+/** One normalized daily forecast. */
 export type ForecastDay = {
 	date: string;
 	maxTemperature: number;
@@ -16,6 +18,7 @@ export type ForecastDay = {
 	weatherCode: number;
 };
 
+/** Weather payload consumed by the weather panel. */
 export type WeatherData = {
 	current: CurrentWeather;
 	forecast: ForecastDay[];
